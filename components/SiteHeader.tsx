@@ -20,8 +20,12 @@ export function SiteHeader() {
       </nav>
       <div className="flex gap-2">
         <SignedOut>
-          <SignInButton />
-          <SignUpButton />
+          <SignInButton mode="modal">
+            <button className="px-3 py-1 text-sm border rounded-xl">Sign in</button>
+          </SignInButton>
+          <SignUpButton mode="modal">
+            <button className="px-3 py-1 text-sm rounded-xl bg-black text-white">Sign up</button>
+          </SignUpButton>
         </SignedOut>
         <SignedIn>
           <UserButton />
