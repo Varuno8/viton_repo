@@ -16,11 +16,16 @@ Create `.env.local` using `.env.example` as a reference. Required variables:
 ```
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_FASTAPI_BASE_URL=http://localhost:8000
-NEXT_PUBLIC_USE_S3=false
 DATABASE_URL=file:./dev.db
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
 ADMIN_EMAILS=founder@example.com,admin@example.com
+
+# Uploads
+UPLOAD_PROVIDER=drive # drive | s3 | local
+GOOGLE_SERVICE_ACCOUNT_EMAIL=...
+GOOGLE_PRIVATE_KEY="..."
+GOOGLE_DRIVE_FOLDER_ID=...
 ```
 
 ## Clerk Setup
@@ -43,6 +48,8 @@ Set `NEXT_PUBLIC_FASTAPI_BASE_URL` to your FastAPI service URL.
 
 ## Uploads
 
-User photos are saved under `public/uploads/{userId}/` in development. When `NEXT_PUBLIC_USE_S3=true` the upload handler is a placeholder for future S3 integration.
+By default user photos are uploaded to a Google Drive folder using a service account. Provide the Drive credentials and `UPLOAD_PROVIDER=drive` in your `.env.local`.
+
+To save files locally use `UPLOAD_PROVIDER=local`, which writes to `public/uploads/{userId}/`. For future S3 support set `UPLOAD_PROVIDER=s3` and supply the AWS credentials.
 
 This repository is a simplified skeleton; additional UI polish, rate limiting, and S3 support can be added.
