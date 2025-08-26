@@ -1,46 +1,25 @@
 import './globals.css'
 import type { ReactNode } from 'react'
-import {
-  ClerkProvider,
-  SignedIn,
-  SignedOut,
-  SignInButton,
-  SignUpButton,
-  UserButton,
-} from '@clerk/nextjs'
+import { ClerkProvider } from '@clerk/nextjs'
 import { SiteHeader } from '@/components/SiteHeader'
+import { Inter } from 'next/font/google'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const provider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || process.env.AUTH_PROVIDER
-
-  const clerkHeader =
-    provider === 'clerk' ? (
-      <header className="flex gap-2 mb-4">
-        <SignedOut>
-          <SignInButton />
-          <SignUpButton />
-        </SignedOut>
-        <SignedIn>
-          <UserButton />
-        </SignedIn>
-      </header>
-    ) : null
-
-  const body = (
-    <body className="max-w-4xl mx-auto p-4">
-      <SiteHeader />
-      {clerkHeader}
-      {children}
-    </body>
+  return (
+    <ClerkProvider>
+      <html lang="en" className="dark">
+        <body className={inter.className}>
+          <div className="min-h-screen flex flex-col bg-app-gradient">
+            <SiteHeader />
+            <main className="flex-1 container py-6">{children}</main>
+            <footer className="border-t border-white/10 bg-black/40 backdrop-blur-md text-center text-sm text-zinc-400 py-6">
+              © {new Date().getFullYear()} Viton
+            </footer>
+          </div>
+        </body>
+      </html>
+    </ClerkProvider>
   )
-
-  if (provider === 'clerk') {
-    return (
-      <ClerkProvider>
-        <html lang="en">{body}</html>
-      </ClerkProvider>
-    )
-  }
-
-  return <html lang="en">{body}</html>
 }
