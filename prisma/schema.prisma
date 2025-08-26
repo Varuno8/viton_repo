@@ -1,0 +1,54 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String?
+  email        String   @unique
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  tryOnJobs    TryOnJob[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  handle      String   @unique
+  title       String
+  description String?
+  brand       String?
+  category    String?
+  price       Decimal   @db.Decimal(10,2)
+  colors      String[]
+  sizes       String[]
+  imageUrls   String[]
+  createdAt   DateTime  @default(now())
+  tryOnJobs   TryOnJob[]
+}
+
+enum TryOnStatus {
+  PENDING
+  RUNNING
+  FAILED
+  DONE
+}
+
+model TryOnJob {
+  id             String       @id @default(cuid())
+  user           User         @relation(fields: [userId], references: [id])
+  userId         String
+  product        Product      @relation(fields: [productId], references: [id])
+  productId      String
+  userPhotoUrls  String[]
+  status         TryOnStatus  @default(PENDING)
+  resultImageUrl String?
+  error          String?
+  externalJobId  String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
