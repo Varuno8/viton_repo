@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { parseProductCsv } from '@/lib/csv'
-import { toDirectDriveUrl } from '@/lib/drive'
-import { getProducts, saveProducts } from '@/lib/products'
+import { prisma } from '@/lib/prisma'
+import { parseProductCsv, toDirectDriveUrl } from '@/lib/csv'
 
 export async function POST(req: NextRequest) {
   const data = await req.json()
   let csvContent = ''
+
   if (data.url) {
     const direct = toDirectDriveUrl(data.url)
-    if (!direct) return NextResponse.json({ error: 'Invalid url' }, { status: 400 })
+    if (!direct) {
+      return NextResponse.json({ error: 'Invalid url' }, { status: 400 })
+    }
     const res = await fetch(direct)
     csvContent = await res.text()
   } else if (data.csv) {
@@ -16,11 +18,35 @@ export async function POST(req: NextRequest) {
   } else {
     return NextResponse.json({ error: 'Missing csv' }, { status: 400 })
   }
-  const newProducts = parseProductCsv(csvContent)
-  const existing = await getProducts()
-  const map = new Map(existing.map(p => [p.handle, p]))
-  newProducts.forEach(p => map.set(p.handle, p))
-  const merged = Array.from(map.values())
-  await saveProducts(merged)
-  return NextResponse.json({ count: merged.length })
+
+  const products = parseProductCsv(csvContent)
+  for (const p of products) {
+    await prisma.product.upsert({
+      where: { handle: p.handle },
+      update: {
+        title: p.title,
+        description: p.description,
+        brand: p.brand,
+        category: p.category,
+        price: p.price,
+        imageUrls: p.imageUrls,
+        colors: p.colors,
+        sizes: p.sizes,
+      },
+      create: {
+        handle: p.handle,
+        title: p.title,
+        description: p.description,
+        brand: p.brand,
+        category: p.category,
+        price: p.price,
+        imageUrls: p.imageUrls,
+        colors: p.colors,
+        sizes: p.sizes,
+      },
+    })
+  }
+
+  const count = await prisma.product.count()
+  return NextResponse.json({ count })
 }

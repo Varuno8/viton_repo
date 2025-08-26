@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth'
 import type { NextAuthOptions } from 'next-auth'
 
 export async function getAuthSession() {
-  if (process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'clerk') {
+  if (process.env.AUTH_PROVIDER === 'clerk') {
     const { auth } = await import('@clerk/nextjs/server')
     try {
       const { userId } = auth()

@@ -1,18 +1,24 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Product } from '@/lib/products'
+import { Product } from '@prisma/client'
 import { ProductCard } from './ProductCard'
-import { api } from '@/lib/api'
 
 export function ProductGrid() {
   const [products, setProducts] = useState<Product[]>([])
   const [query, setQuery] = useState('')
-  useEffect(() => { api<Product[]>('/api/products').then(setProducts) }, [])
+
+  useEffect(() => {
+    fetch('/api/products')
+      .then(res => res.json())
+      .then((data: Product[]) => setProducts(data))
+  }, [])
+
   const filtered = products.filter(p =>
     p.title.toLowerCase().includes(query.toLowerCase()) ||
-    p.brand.toLowerCase().includes(query.toLowerCase()) ||
-    p.category.toLowerCase().includes(query.toLowerCase())
+    (p.brand ?? '').toLowerCase().includes(query.toLowerCase()) ||
+    (p.category ?? '').toLowerCase().includes(query.toLowerCase())
   )
+
   return (
     <div>
       <input

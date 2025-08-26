@@ -2,32 +2,38 @@
 import { useState } from 'react'
 import { ImageUploader } from './ImageUploader'
 import { ResultModal } from './ResultModal'
-import { Product } from '@/lib/products'
 import { addHistory } from '@/lib/history'
 
-export function TryOnPanel({ product }: { product: Product }) {
+interface TryOnPanelProps {
+  productId: string
+  sizes?: string[]
+  colors?: string[]
+  garmentImageUrl?: string
+}
+
+export function TryOnPanel({ productId, sizes = [], colors = [], garmentImageUrl }: TryOnPanelProps) {
   const [urls, setUrls] = useState<string[]>([])
   const [status, setStatus] = useState('')
   const [result, setResult] = useState<string | null>(null)
-  const [size, setSize] = useState(product.sizes[0] || '')
-  const [color, setColor] = useState(product.colors[0] || '')
+  const [size, setSize] = useState(sizes[0] || '')
+  const [color, setColor] = useState(colors[0] || '')
 
   async function start() {
     const res = await fetch('/api/try-on', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        productId: product.id,
+        productId,
         userPhotoUrls: urls,
         size,
         color,
-        garmentImageUrl: product.imageUrls[0],
+        garmentImageUrl,
       }),
     })
     if (!res.ok) return
-    const { job_id } = await res.json()
+    const { id } = await res.json()
     setStatus('PENDING')
-    poll(job_id)
+    poll(id)
   }
 
   function poll(id: string) {
@@ -41,7 +47,7 @@ export function TryOnPanel({ product }: { product: Product }) {
         setResult(data.resultImageUrl || null)
         addHistory({
           id,
-          productId: product.id,
+          productId,
           status: data.status,
           resultImageUrl: data.resultImageUrl,
           createdAt: new Date().toISOString(),
@@ -53,16 +59,16 @@ export function TryOnPanel({ product }: { product: Product }) {
   return (
     <div className="border p-4 mt-4 space-y-2">
       <div className="flex gap-2">
-        {product.colors.length > 0 && (
+        {colors.length > 0 && (
           <select value={color} onChange={e => setColor(e.target.value)} className="border p-1">
-            {product.colors.map(c => (
+            {colors.map(c => (
               <option key={c}>{c}</option>
             ))}
           </select>
         )}
-        {product.sizes.length > 0 && (
+        {sizes.length > 0 && (
           <select value={size} onChange={e => setSize(e.target.value)} className="border p-1">
-            {product.sizes.map(s => (
+            {sizes.map(s => (
               <option key={s}>{s}</option>
             ))}
           </select>

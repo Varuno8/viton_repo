@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Product } from '@/lib/products'
+import { Product } from '@prisma/client'
 
 export function ProductCard({ product }: { product: Product }) {
   return (

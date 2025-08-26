@@ -3,17 +3,28 @@ import { useState } from 'react'
 
 export function ImageUploader({ onUploaded }: { onUploaded: (urls: string[]) => void }) {
   const [urls, setUrls] = useState<string[]>([])
+
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []).slice(0, 3)
-    const form = new FormData()
-    files.forEach(f => form.append('files', f))
-    const res = await fetch('/api/upload', { method: 'POST', body: form })
-    if (res.ok) {
-      const data = await res.json()
-      setUrls(data.urls)
-      onUploaded(data.urls)
+    const uploaded: string[] = []
+
+    for (const file of files) {
+      const buffer = await file.arrayBuffer()
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'content-type': file.type },
+        body: buffer,
+      })
+      if (res.ok) {
+        const data = await res.json()
+        uploaded.push(data.url)
+      }
     }
+
+    setUrls(uploaded)
+    onUploaded(uploaded)
   }
+
   return (
     <div>
       <input type="file" accept="image/*" multiple onChange={handleChange} />

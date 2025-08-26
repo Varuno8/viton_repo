@@ -1,26 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getProducts } from '@/lib/products'
-
-const BASE = process.env.NEXT_PUBLIC_FASTAPI_BASE_URL || 'http://localhost:8000'
+import { prisma } from '@/lib/prisma'
+import { getAuthSession } from '@/lib/auth'
+import { startTryOn } from '@/lib/fastapi'
 
 export async function POST(req: NextRequest) {
-  const { productId, userPhotoUrls, size, color, garmentImageUrl } = await req.json()
-  let gUrl = garmentImageUrl
-  if (!gUrl) {
-    const products = await getProducts()
-    const prod = products.find(p => p.id === productId)
-    gUrl = prod?.imageUrls[0]
+  const session = await getAuthSession()
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const res = await fetch(`${BASE}/try-on`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      user_photo_urls: userPhotoUrls,
-      garment_image_url: gUrl,
-      options: { size, color },
-    }),
+
+  const { productId, userPhotoUrls, options, garmentImageUrl } = await req.json()
+  const product = await prisma.product.findUnique({ where: { id: productId } })
+  if (!product) {
+    return NextResponse.json({ error: 'Invalid product' }, { status: 400 })
+  }
+
+  // Use garmentImageUrl override if provided, otherwise fall back to product image
+  const gUrl = garmentImageUrl || product.imageUrls[0]
+
+  const job = await prisma.tryOnJob.create({
+    data: { userId: session.user.id, productId, userPhotoUrls }
   })
-  if (!res.ok) return NextResponse.json({ error: 'fastapi error' }, { status: 500 })
-  const data = await res.json()
-  return NextResponse.json({ job_id: data.job_id })
+
+  try {
+    const res = await startTryOn(userPhotoUrls, gUrl, options)
+    await prisma.tryOnJob.update({
+      where: { id: job.id },
+      data: { externalJobId: res.job_id, status: 'RUNNING' }
+    })
+  } catch (e) {
+    await prisma.tryOnJob.update({
+      where: { id: job.id },
+      data: { status: 'FAILED', error: String(e) }
+    })
+  }
+
+  return NextResponse.json({ id: job.id })
 }

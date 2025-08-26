@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { clerkMiddleware } from '@clerk/nextjs/server'
 
 export default function middleware(req: Request) {
-  if (process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'clerk') {
+  if (process.env.AUTH_PROVIDER === 'clerk') {
     return clerkMiddleware({
       publicRoutes: ['/', '/products', '/products/(.*)', '/api/try-on/status']
     })(req)

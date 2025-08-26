@@ -3,7 +3,7 @@ import path from 'path'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { v4 as uuid } from 'uuid'
 
-const useS3 = process.env.NEXT_PUBLIC_USE_S3 === 'true'
+const useS3 = process.env.USE_S3 === 'true'
 const localDir = path.join(process.cwd(), 'public', 'uploads')
 
 export async function saveBuffer(buffer: Buffer, userId: string, ext: string) {

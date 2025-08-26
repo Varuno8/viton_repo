@@ -1,13 +1,16 @@
-'use client'
-import { useEffect, useState } from 'react'
-import { getHistory, HistoryItem } from '@/lib/history'
+import { prisma } from '@/lib/prisma'
+import { getAuthSession } from '@/lib/auth'
 import { StatusBadge } from '@/components/StatusBadge'
 
-export default function HistoryPage() {
-  const [jobs, setJobs] = useState<HistoryItem[]>([])
-  useEffect(() => {
-    setJobs(getHistory())
-  }, [])
+export default async function HistoryPage() {
+  const session = await getAuthSession()
+  if (!session?.user) return <div>Please sign in</div>
+  const jobs = await prisma.tryOnJob.findMany({
+    where: { userId: session.user.id },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+  })
+
   return (
     <div>
       <h1 className="text-xl mb-4">Try-On History</h1>
@@ -17,7 +20,7 @@ export default function HistoryPage() {
             <StatusBadge status={job.status} />
             {job.resultImageUrl && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={job.resultImageUrl} className="w-20 h-20 object-cover" />
+              <img src={job.resultImageUrl} className="w-40 h-40 object-cover" />
             )}
           </li>
         ))}

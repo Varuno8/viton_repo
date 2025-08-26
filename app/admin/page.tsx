@@ -7,7 +7,9 @@ export default function AdminPage() {
   const [count, setCount] = useState<number | null>(null)
 
   useEffect(() => {
-    api<any[]>('/api/products').then(p => setCount(p.length)).catch(() => {})
+    api<any[]>('/api/products')
+      .then(p => setCount(p.length))
+      .catch(() => {})
   }, [])
 
   async function ingest() {
@@ -25,8 +27,18 @@ export default function AdminPage() {
   return (
     <div>
       <h1 className="text-xl mb-4">Admin</h1>
-      <input className="border p-2 w-full" value={url} onChange={e => setUrl(e.target.value)} placeholder="CSV URL" />
-      <button onClick={ingest} className="bg-green-600 text-white px-4 py-2 mt-2">Ingest</button>
+      <input
+        className="border p-2 w-full"
+        value={url}
+        onChange={e => setUrl(e.target.value)}
+        placeholder="CSV URL"
+      />
+      <button
+        onClick={ingest}
+        className="bg-green-600 text-white px-4 py-2 mt-2"
+      >
+        Ingest
+      </button>
       {count !== null && <p className="mt-2">Product count: {count}</p>}
     </div>
   )
