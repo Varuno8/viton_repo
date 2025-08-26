@@ -11,6 +11,7 @@ import {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   const provider = process.env.AUTH_PROVIDER
+
   const header =
     provider === 'clerk' ? (
       <header className="flex gap-2 mb-4">
@@ -38,5 +39,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </ClerkProvider>
     )
   }
+
   return <html lang="en">{body}</html>
 }
