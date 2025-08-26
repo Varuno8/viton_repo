@@ -8,11 +8,11 @@ generator client {
 }
 
 model User {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
+  clerkUserId  String     @unique
+  email        String
   name         String?
-  email        String   @unique
-  passwordHash String?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime   @default(now())
   tryOnJobs    TryOnJob[]
 }
 
@@ -20,35 +20,35 @@ model Product {
   id          String   @id @default(cuid())
   handle      String   @unique
   title       String
+  shortDesc   String?
   description String?
   brand       String?
   category    String?
-  price       Decimal   @db.Decimal(10,2)
-  colors      String[]
-  sizes       String[]
-  imageUrls   String[]
+  pattern     String?
+  color       String?
+  tags        String?
+  skus        String?
+  price       Float?
+  priceMin    Float?
+  priceMax    Float?
+  imageUrls   String
+  productUrl  String?
   createdAt   DateTime  @default(now())
   tryOnJobs   TryOnJob[]
 }
 
-enum TryOnStatus {
-  PENDING
-  RUNNING
-  FAILED
-  DONE
-}
-
 model TryOnJob {
-  id             String       @id @default(cuid())
-  user           User         @relation(fields: [userId], references: [id])
+  id             String   @id @default(cuid())
   userId         String
-  product        Product      @relation(fields: [productId], references: [id])
   productId      String
-  userPhotoUrls  String[]
-  status         TryOnStatus  @default(PENDING)
+  userPhotoUrls  String
+  status         String   @default("PENDING")
   resultImageUrl String?
   error          String?
   externalJobId  String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
 }

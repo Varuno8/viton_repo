@@ -1,8 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: { appDir: true },
+  reactStrictMode: true,
   images: {
-    domains: ['localhost', 'images.unsplash.com'],
-  },
+    remotePatterns: [
+      { protocol: "https", hostname: "cdn.shopify.com" },
+      { protocol: "https", hostname: "**" }
+    ]
+  }
 };
 export default nextConfig;
