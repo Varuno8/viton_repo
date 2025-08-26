@@ -8,11 +8,12 @@ import {
   SignUpButton,
   UserButton,
 } from '@clerk/nextjs'
+import { SiteHeader } from '@/components/SiteHeader'
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const provider = process.env.AUTH_PROVIDER
+  const provider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || process.env.AUTH_PROVIDER
 
-  const header =
+  const clerkHeader =
     provider === 'clerk' ? (
       <header className="flex gap-2 mb-4">
         <SignedOut>
@@ -27,7 +28,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
   const body = (
     <body className="max-w-4xl mx-auto p-4">
-      {header}
+      <SiteHeader />
+      {clerkHeader}
       {children}
     </body>
   )

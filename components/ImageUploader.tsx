@@ -3,9 +3,11 @@ import { useState } from 'react'
 
 export function ImageUploader({ onUploaded }: { onUploaded: (urls: string[]) => void }) {
   const [urls, setUrls] = useState<string[]>([])
+
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files || []).slice(0,3)
+    const files = Array.from(e.target.files || []).slice(0, 3)
     const uploaded: string[] = []
+
     for (const file of files) {
       const buffer = await file.arrayBuffer()
       const res = await fetch('/api/upload', {
@@ -18,9 +20,11 @@ export function ImageUploader({ onUploaded }: { onUploaded: (urls: string[]) => 
         uploaded.push(data.url)
       }
     }
+
     setUrls(uploaded)
     onUploaded(uploaded)
   }
+
   return (
     <div>
       <input type="file" accept="image/*" multiple onChange={handleChange} />

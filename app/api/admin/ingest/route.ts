@@ -5,15 +5,20 @@ import { parseProductCsv, toDirectDriveUrl } from '@/lib/csv'
 export async function POST(req: NextRequest) {
   const data = await req.json()
   let csvContent = ''
+
   if (data.url) {
-    const url = toDirectDriveUrl(data.url)
-    const res = await fetch(url)
+    const direct = toDirectDriveUrl(data.url)
+    if (!direct) {
+      return NextResponse.json({ error: 'Invalid url' }, { status: 400 })
+    }
+    const res = await fetch(direct)
     csvContent = await res.text()
   } else if (data.csv) {
     csvContent = data.csv
   } else {
     return NextResponse.json({ error: 'Missing csv' }, { status: 400 })
   }
+
   const products = parseProductCsv(csvContent)
   for (const p of products) {
     await prisma.product.upsert({
@@ -38,9 +43,10 @@ export async function POST(req: NextRequest) {
         imageUrls: p.imageUrls,
         colors: p.colors,
         sizes: p.sizes,
-      }
+      },
     })
   }
+
   const count = await prisma.product.count()
   return NextResponse.json({ count })
 }
