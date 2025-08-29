@@ -20,7 +20,11 @@ export function ProductGrid() {
     setLoading(true)
     fetch('/api/products?q=' + encodeURIComponent(query))
       .then(res => res.json())
-      .then((data: Product[]) => setProducts(data))
+      .then((data: unknown) => {
+        if (Array.isArray(data)) setProducts(data as Product[])
+        else setProducts([])
+      })
+      .catch(() => setProducts([]))
       .finally(() => setLoading(false))
   }, [query])
 
