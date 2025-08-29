@@ -1,13 +1,12 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { useFormState } from 'react-dom'
+import { useActionState, useEffect, useState } from 'react'
 import { ingestAction } from './actions'
 import { api } from '@/lib/api'
 
 const initialState = { count: null as number | null, error: null as string | null }
 
 export default function AdminPage() {
-  const [state, formAction] = useFormState(ingestAction, initialState)
+  const [state, formAction] = useActionState(ingestAction, initialState)
   const [count, setCount] = useState<number | null>(null)
 
   useEffect(() => {
