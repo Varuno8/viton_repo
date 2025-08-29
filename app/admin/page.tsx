@@ -10,13 +10,17 @@ export default function AdminPage() {
   const [count, setCount] = useState<number | null>(null)
 
   useEffect(() => {
-    api<any[]>('/api/products')
-      .then(p => setCount(p.length))
+    api<{ count: number }>('/api/admin/products-count')
+      .then(res => setCount(res.count))
       .catch(() => {})
   }, [])
 
   useEffect(() => {
-    if (state.count !== null) setCount(state.count)
+    if (state.count !== null) {
+      api<{ count: number }>('/api/admin/products-count')
+        .then(res => setCount(res.count))
+        .catch(() => {})
+    }
   }, [state.count])
 
   return (

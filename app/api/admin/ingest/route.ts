@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ingestCsvContent, ingestCsvFromUrl } from '@/lib/admin';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get('content-type') || '';
@@ -35,7 +37,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ingestedCount: count });
+    return NextResponse.json({ ingestedCount: count }, {
+      headers: { 'Cache-Control': 'no-store' },
+    });
   } catch (err) {
     console.error('Ingest error', err);
     return NextResponse.json({ error: 'Failed to ingest CSV' }, { status: 500 });

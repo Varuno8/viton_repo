@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -18,14 +20,24 @@ export async function GET(req: NextRequest) {
       where,
       orderBy: { createdAt: 'desc' },
       take: 100,
+      select: {
+        id: true,
+        handle: true,
+        title: true,
+        brand: true,
+        price: true,
+        imageUrls: true,
+      },
     });
-    
+
     const productsWithFirstImage = products.map(product => ({
       ...product,
       firstImage: product.imageUrls.split('|')[0] || null,
     }));
-    
-    return NextResponse.json(productsWithFirstImage);
+
+    return NextResponse.json(productsWithFirstImage, {
+      headers: { 'Cache-Control': 'no-store' },
+    });
   } catch (error) {
     console.error('Products API error:', error);
     return NextResponse.json(

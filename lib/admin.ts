@@ -3,16 +3,20 @@ import { parseProductCsv, toDirectDriveUrl } from './csv'
 
 export async function ingestCsvContent(csv: string, replace = true) {
   const products = parseProductCsv(csv)
-  if (replace) {
-    await prisma.product.deleteMany()
-  }
-  for (const p of products) {
-    await prisma.product.upsert({
-      where: { handle: p.handle },
-      update: p,
-      create: p,
-    })
-  }
+
+  await prisma.$transaction(async tx => {
+    if (replace) {
+      await tx.product.deleteMany()
+    }
+    for (const p of products) {
+      await tx.product.upsert({
+        where: { handle: p.handle },
+        update: p,
+        create: p,
+      })
+    }
+  })
+
   return products.length
 }
 

@@ -11,14 +11,19 @@ interface Product {
   firstImage: string | null
 }
 
-export function ProductGrid() {
-  const [products, setProducts] = useState<Product[]>([])
+interface Props {
+  initialProducts: Product[]
+}
+
+export function ProductGrid({ initialProducts }: Props) {
+  const [products, setProducts] = useState<Product[]>(initialProducts)
   const [query, setQuery] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    if (query === '') return
     setLoading(true)
-    fetch('/api/products?q=' + encodeURIComponent(query))
+    fetch('/api/products?q=' + encodeURIComponent(query), { cache: 'no-store' })
       .then(res => res.json())
       .then((data: unknown) => {
         if (Array.isArray(data)) setProducts(data as Product[])

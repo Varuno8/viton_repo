@@ -68,9 +68,21 @@ export function normalizeCsvRow(raw: any) {
   };
 }
 
-export function toProductDraft(row: any) {
+export function toProductDraft(row: any, index: number) {
   const blob = parseKeyValueBlob(row.description || '');
-  const title = blob.title || row.title || 'Untitled';
+  let title = blob.title || row.title;
+
+  if (!title && row.product_url) {
+    try {
+      const url = new URL(row.product_url);
+      title = decodeURIComponent(url.pathname.split('/').filter(Boolean).pop() || '')
+        .replace(/[-_]/g, ' ');
+    } catch {
+      /* ignore */
+    }
+  }
+  if (!title) title = `Untitled ${index + 1}`;
+
   const handle = row.handle ?? slugifyTitle(title);
 
   const tags = (blob.tags || '')
@@ -123,11 +135,11 @@ export function parseProductCsv(csv: string) {
     trim: true,
   });
   const products = [] as ReturnType<typeof toProductDraft>[];
-  for (const raw of records) {
+  records.forEach((raw, i) => {
     const normalized = normalizeCsvRow(raw);
     const parsed = csvRowSchema.safeParse(normalized);
-    if (!parsed.success) continue;
-    products.push(toProductDraft(parsed.data));
-  }
+    if (!parsed.success) return;
+    products.push(toProductDraft(parsed.data, i));
+  });
   return products;
 }

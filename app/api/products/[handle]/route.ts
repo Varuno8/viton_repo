@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { handle: string } }
@@ -21,7 +23,9 @@ export async function GET(
       skus: product.skus?.split('|').filter(Boolean) ?? [],
     };
     
-    return NextResponse.json(productWithArrays);
+    return NextResponse.json(productWithArrays, {
+      headers: { 'Cache-Control': 'no-store' },
+    });
   } catch (error) {
     console.error('Product API error:', error);
     return NextResponse.json(
