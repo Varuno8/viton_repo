@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { splitPipe, splitComma } from '@/lib/helpers';
 
 export async function GET(
   req: NextRequest,
@@ -17,9 +16,9 @@ export async function GET(
     
     const productWithArrays = {
       ...product,
-      imageUrls: splitPipe(product.imageUrls),
-      tags: splitComma(product.tags),
-      skus: splitPipe(product.skus),
+      imageUrls: product.imageUrls.split('|').filter(Boolean),
+      tags: product.tags?.split(',').map(t => t.trim()).filter(Boolean) ?? [],
+      skus: product.skus?.split('|').filter(Boolean) ?? [],
     };
     
     return NextResponse.json(productWithArrays);

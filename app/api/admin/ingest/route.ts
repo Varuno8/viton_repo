@@ -1,88 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { parseProductCsv, toDirectDriveUrl } from '@/lib/csv';
+import { csvRowSchema, toProductDraft } from '@/lib/csv';
+import { parse } from 'csv-parse';
+import { Readable } from 'stream';
+
+function driveUrl(url: string): string {
+  const match = url.match(/\/file\/d\/([^/]+)\//);
+  return match ? `https://drive.google.com/uc?export=download&id=${match[1]}` : url;
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const contentType = req.headers.get('content-type');
-    let csvContent: string;
-    
-    if (contentType?.includes('multipart/form-data')) {
-      const formData = await req.formData();
-      const file = formData.get('file') as File;
-      
+    const contentType = req.headers.get('content-type') || '';
+    let stream: Readable;
+
+    if (contentType.includes('multipart/form-data')) {
+      const form = await req.formData();
+      const file = form.get('file') as File | null;
       if (!file) {
         return NextResponse.json({ error: 'No file provided' }, { status: 400 });
       }
-      
-      csvContent = await file.text();
+      const buf = Buffer.from(await file.arrayBuffer());
+      stream = Readable.from(buf);
     } else {
-      const body = await req.json();
-      const { url } = body;
-      
+      const body = await req.json().catch(() => null);
+      const url = body?.url;
       if (!url) {
         return NextResponse.json({ error: 'No URL provided' }, { status: 400 });
       }
-      
-      const directUrl = toDirectDriveUrl(url);
-      const response = await fetch(directUrl);
-      
-      if (!response.ok) {
+      const res = await fetch(driveUrl(url));
+      if (!res.ok) {
         return NextResponse.json({ error: 'Failed to fetch CSV from URL' }, { status: 400 });
       }
-      
-      csvContent = await response.text();
+      const text = await res.text();
+      stream = Readable.from(text);
     }
-    
-    const products = parseProductCsv(csvContent);
+
+    const parser = stream.pipe(
+      parse({ columns: true, relax_column_count: true, skip_empty_lines: true, trim: true })
+    );
+
     let ingestedCount = 0;
-    
-    for (const productData of products) {
+    for await (const raw of parser) {
+      const parsed = csvRowSchema.safeParse(raw);
+      if (!parsed.success) {
+        console.error('Invalid row', parsed.error.message);
+        continue;
+      }
+      const draft = toProductDraft(parsed.data);
       await prisma.product.upsert({
-        where: { handle: productData.handle },
-        update: {
-          title: productData.title,
-          shortDesc: productData.shortDesc,
-          description: productData.description,
-          brand: productData.brand,
-          category: productData.category,
-          pattern: productData.pattern,
-          color: productData.color,
-          tags: productData.tags,
-          skus: productData.skus,
-          price: productData.price,
-          priceMin: productData.priceMin,
-          priceMax: productData.priceMax,
-          imageUrls: productData.imageUrls,
-          productUrl: productData.productUrl,
-        },
-        create: {
-          handle: productData.handle,
-          title: productData.title,
-          shortDesc: productData.shortDesc,
-          description: productData.description,
-          brand: productData.brand,
-          category: productData.category,
-          pattern: productData.pattern,
-          color: productData.color,
-          tags: productData.tags,
-          skus: productData.skus,
-          price: productData.price,
-          priceMin: productData.priceMin,
-          priceMax: productData.priceMax,
-          imageUrls: productData.imageUrls,
-          productUrl: productData.productUrl,
-        },
+        where: { handle: draft.handle },
+        update: draft,
+        create: draft,
       });
       ingestedCount++;
     }
-    
+
     return NextResponse.json({ ingestedCount });
-  } catch (error) {
-    console.error('Ingest error:', error);
-    return NextResponse.json(
-      { error: 'Failed to ingest CSV' }, 
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error('Ingest error', err);
+    return NextResponse.json({ error: 'Failed to ingest CSV' }, { status: 500 });
   }
 }

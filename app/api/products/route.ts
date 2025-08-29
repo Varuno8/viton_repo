@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { splitPipe } from '@/lib/helpers';
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,7 +22,7 @@ export async function GET(req: NextRequest) {
     
     const productsWithFirstImage = products.map(product => ({
       ...product,
-      firstImage: splitPipe(product.imageUrls)[0] || null,
+      firstImage: product.imageUrls.split('|')[0] || null,
     }));
     
     return NextResponse.json(productsWithFirstImage);
