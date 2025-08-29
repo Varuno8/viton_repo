@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parse } from 'csv-parse/sync';
 
 export function parseKeyValueBlob(blob: string): Record<string, string> {
   const result: Record<string, string> = {};
@@ -53,6 +54,20 @@ export function slugifyTitle(input?: string): string {
     .substring(0, 80);
 }
 
+export function toDirectDriveUrl(url: string) {
+  const match = url.match(/\/file\/d\/([^/]+)\//);
+  return match ? `https://drive.google.com/uc?export=download&id=${match[1]}` : url;
+}
+
+export function normalizeCsvRow(raw: any) {
+  return {
+    ...raw,
+    description: raw.description ?? raw.Description ?? '',
+    image_url: raw.image_url ?? raw.image_urls ?? raw.images ?? '',
+    product_url: raw.product_url ?? raw.url ?? null,
+  };
+}
+
 export function toProductDraft(row: any) {
   const blob = parseKeyValueBlob(row.description || '');
   const title = blob.title || row.title || 'Untitled';
@@ -99,3 +114,20 @@ export const csvRowSchema = z.object({
   image_url: z.string().optional().default(''),
   product_url: z.string().optional().nullable(),
 }).passthrough();
+
+export function parseProductCsv(csv: string) {
+  const records = parse(csv, {
+    columns: true,
+    relax_column_count: true,
+    skip_empty_lines: true,
+    trim: true,
+  });
+  const products = [] as ReturnType<typeof toProductDraft>[];
+  for (const raw of records) {
+    const normalized = normalizeCsvRow(raw);
+    const parsed = csvRowSchema.safeParse(normalized);
+    if (!parsed.success) continue;
+    products.push(toProductDraft(parsed.data));
+  }
+  return products;
+}

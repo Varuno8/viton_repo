@@ -1,41 +1,25 @@
 import { prisma } from './prisma'
 import { parseProductCsv, toDirectDriveUrl } from './csv'
 
-export async function ingestCsvContent(csv: string) {
+export async function ingestCsvContent(csv: string, replace = true) {
   const products = parseProductCsv(csv)
+  if (replace) {
+    await prisma.product.deleteMany()
+  }
   for (const p of products) {
     await prisma.product.upsert({
       where: { handle: p.handle },
-      update: {
-        title: p.title,
-        description: p.description,
-        brand: p.brand,
-        category: p.category,
-        price: p.price,
-        imageUrls: p.imageUrls,
-        colors: p.colors,
-        sizes: p.sizes,
-      },
-      create: {
-        handle: p.handle,
-        title: p.title,
-        description: p.description,
-        brand: p.brand,
-        category: p.category,
-        price: p.price,
-        imageUrls: p.imageUrls,
-        colors: p.colors,
-        sizes: p.sizes,
-      },
+      update: p,
+      create: p,
     })
   }
-  return prisma.product.count()
+  return products.length
 }
 
-export async function ingestCsvFromUrl(url: string) {
+export async function ingestCsvFromUrl(url: string, replace = true) {
   const direct = toDirectDriveUrl(url)
-  if (!direct) throw new Error('Invalid url')
   const res = await fetch(direct)
+  if (!res.ok) throw new Error('Failed to fetch CSV from URL')
   const csv = await res.text()
-  return ingestCsvContent(csv)
+  return ingestCsvContent(csv, replace)
 }

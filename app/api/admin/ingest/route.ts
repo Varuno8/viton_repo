@@ -1,62 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { csvRowSchema, toProductDraft } from '@/lib/csv';
-import { parse } from 'csv-parse';
-import { Readable } from 'stream';
-
-function driveUrl(url: string): string {
-  const match = url.match(/\/file\/d\/([^/]+)\//);
-  return match ? `https://drive.google.com/uc?export=download&id=${match[1]}` : url;
-}
+import { ingestCsvContent, ingestCsvFromUrl } from '@/lib/admin';
 
 export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get('content-type') || '';
-    let stream: Readable;
+    let count: number;
+    let replace = true;
 
     if (contentType.includes('multipart/form-data')) {
       const form = await req.formData();
+      replace = form.get('replace') !== null;
       const file = form.get('file') as File | null;
-      if (!file) {
-        return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+      const url = (form.get('url') as string | null)?.trim();
+      if (file && file.size > 0) {
+        const text = await file.text();
+        count = await ingestCsvContent(text, replace);
+      } else if (url) {
+        count = await ingestCsvFromUrl(url, replace);
+      } else {
+        return NextResponse.json({ error: 'No file or URL provided' }, { status: 400 });
       }
-      const buf = Buffer.from(await file.arrayBuffer());
-      stream = Readable.from(buf);
     } else {
       const body = await req.json().catch(() => null);
-      const url = body?.url;
-      if (!url) {
-        return NextResponse.json({ error: 'No URL provided' }, { status: 400 });
+      if (!body) {
+        return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
       }
-      const res = await fetch(driveUrl(url));
-      if (!res.ok) {
-        return NextResponse.json({ error: 'Failed to fetch CSV from URL' }, { status: 400 });
+      replace = body.replace !== false;
+      if (body.csv) {
+        count = await ingestCsvContent(body.csv, replace);
+      } else if (body.url) {
+        count = await ingestCsvFromUrl(body.url, replace);
+      } else {
+        return NextResponse.json({ error: 'No CSV or URL provided' }, { status: 400 });
       }
-      const text = await res.text();
-      stream = Readable.from(text);
     }
 
-    const parser = stream.pipe(
-      parse({ columns: true, relax_column_count: true, skip_empty_lines: true, trim: true })
-    );
-
-    let ingestedCount = 0;
-    for await (const raw of parser) {
-      const parsed = csvRowSchema.safeParse(raw);
-      if (!parsed.success) {
-        console.error('Invalid row', parsed.error.message);
-        continue;
-      }
-      const draft = toProductDraft(parsed.data);
-      await prisma.product.upsert({
-        where: { handle: draft.handle },
-        update: draft,
-        create: draft,
-      });
-      ingestedCount++;
-    }
-
-    return NextResponse.json({ ingestedCount });
+    return NextResponse.json({ ingestedCount: count });
   } catch (err) {
     console.error('Ingest error', err);
     return NextResponse.json({ error: 'Failed to ingest CSV' }, { status: 500 });
