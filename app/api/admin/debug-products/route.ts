@@ -5,13 +5,13 @@ export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const rows = await prisma.product.findMany({
-    take: 5,
+    take: 8,
     select: {
       handle: true,
       title: true,
       shortDesc: true,
+      description: true,
       imageUrls: true,
-      productUrl: true,
     },
   })
   return NextResponse.json(rows, {

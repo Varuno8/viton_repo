@@ -1,12 +1,15 @@
 import { parse } from 'csv-parse/sync'
 
 // basic string helpers
-const norm = (s?: string) => (s || '').trim()
-const lc = (s?: string) => norm(s).toLowerCase()
+const norm = (s?: string | null) => (s ?? '').trim()
+const lc = (s?: string | null) => norm(s).toLowerCase()
 
 function getAny(row: Record<string, any>, ...keys: string[]) {
   for (const k of keys) {
-    const v = row[k] ?? row[k.toLowerCase()] ?? row[k.toUpperCase()]
+    const v =
+      row[k] ??
+      row[k?.toLowerCase?.()] ??
+      row[k?.toUpperCase?.()]
     if (v != null && String(v).trim() !== '') return String(v)
   }
   return ''
@@ -14,12 +17,14 @@ function getAny(row: Record<string, any>, ...keys: string[]) {
 
 export function splitMultiUrls(s?: string) {
   if (!s) return []
-  const raw = String(s)
-    .replace(/\|/g, ';')
-    .split(';')
-    .flatMap(chunk => chunk.split(','))
+  const normalized = String(s).replace(/\|/g, ';')
+  const pieces = normalized.split(';').flatMap(seg => seg.split(','))
   const urls = Array.from(
-    new Set(raw.map(x => x.trim()).filter(x => /^https?:\/\//i.test(x)))
+    new Set(
+      pieces
+        .map(x => x.trim())
+        .filter(x => /^https?:\/\//i.test(x))
+    )
   )
   return urls
 }
@@ -145,7 +150,7 @@ export function parseProductCsv(csv: string) {
     trim: true,
   })
 
-  const products: ReturnType<typeof toProductDraft>[] = []
+  const products: NonNullable<ReturnType<typeof toProductDraft>>[] = []
   records.forEach((raw, i) => {
     const draft = toProductDraft(raw, i)
     if (draft) products.push(draft)
