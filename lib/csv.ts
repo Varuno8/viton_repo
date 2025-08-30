@@ -5,14 +5,27 @@ const norm = (s?: string | null) => (s ?? '').trim()
 const lc = (s?: string | null) => norm(s).toLowerCase()
 
 function getAny(row: Record<string, any>, ...keys: string[]) {
-  for (const k of keys) {
-    const v =
-      row[k] ??
-      row[k?.toLowerCase?.()] ??
-      row[k?.toUpperCase?.()]
-    if (v != null && String(v).trim() !== '') return String(v)
+  const entries = Object.entries(row)
+  for (const alias of keys) {
+    const a = lc(alias).replace(/[\s_-]+/g, '')
+    for (const [k, v] of entries) {
+      const normKey = lc(k).replace(/[\s_-]+/g, '')
+      if (normKey === a || normKey.includes(a) || a.includes(normKey)) {
+        if (v != null && String(v).trim() !== '') return String(v)
+      }
+    }
   }
   return ''
+}
+
+function findUrls(row: Record<string, any>) {
+  const urls: string[] = []
+  for (const v of Object.values(row)) {
+    if (typeof v === 'string' && /^https?:\/\//i.test(v.trim())) {
+      urls.push(v.trim())
+    }
+  }
+  return urls
 }
 
 export function splitMultiUrls(s?: string) {
@@ -64,8 +77,18 @@ export function toProductDraft(row: Record<string, any>, index: number) {
     getAny(row, 'description', 'Description', 'desc', 'details', 'long_description')
   )
 
+  const taglineVal = Object.values(row).find(v =>
+    typeof v === 'string' && /save .+ to favourites/i.test(v)
+  ) as string | undefined
+
+  const allUrls = findUrls(row)
+
+  let productUrl = getAny(row, 'product_url', 'url', 'link', 'href')
+  if (!productUrl) {
+    productUrl = allUrls.find(u => !/\.(jpe?g|png|gif|webp)(\?|$)/i.test(u)) || ''
+  }
+
   let fromUrl = ''
-  const productUrl = getAny(row, 'product_url', 'url', 'link')
   if (!blob['title'] && productUrl) {
     try {
       const u = new URL(productUrl)
@@ -80,11 +103,29 @@ export function toProductDraft(row: Record<string, any>, index: number) {
     }
   }
 
-  const title =
-    norm(blob['title'] || getAny(row, 'title', 'name') || fromUrl) ||
-    `Untitled ${index + 1}`
+  let title = norm(blob['title'] || getAny(row, 'title', 'name') || '')
+  if (!title && taglineVal) {
+    const m = taglineVal.match(/save (.+) to favourites/i)
+    if (m) title = norm(m[1])
+  }
+  if (!title) {
+    for (const v of Object.values(row)) {
+      if (typeof v !== 'string') continue
+      const t = norm(v)
+      if (
+        t &&
+        !/^https?:/i.test(t) &&
+        !/rs\.?/i.test(t) &&
+        !/^[+\d]/.test(t)
+      ) {
+        title = t
+        break
+      }
+    }
+  }
+  if (!title) title = fromUrl || `Untitled ${index + 1}`
 
-  const images = splitMultiUrls(
+  let images = splitMultiUrls(
     getAny(
       row,
       'image_url',
@@ -92,9 +133,13 @@ export function toProductDraft(row: Record<string, any>, index: number) {
       'images',
       'image',
       'photos',
-      'picture_urls'
+      'picture_urls',
+      'src'
     )
   )
+  if (images.length === 0) {
+    images = allUrls.filter(u => /\.(jpe?g|png|gif|webp)(\?|$)/i.test(u))
+  }
 
   const handle =
     norm(row.handle && String(row.handle)) || slugifyTitle(title)
@@ -104,11 +149,17 @@ export function toProductDraft(row: Record<string, any>, index: number) {
     return null
   }
 
+  const shortDesc = norm(
+    blob['short description'] ||
+      (taglineVal ? taglineVal.replace(/save|to favourites/gi, '').trim() : '')
+  )
+  const description = norm(blob['description'] || shortDesc)
+
   const draft = {
     handle,
     title,
-    shortDesc: norm(blob['short description'] || ''),
-    description: norm(blob['description'] || blob['short description'] || ''),
+    shortDesc,
+    description,
     brand: norm(blob['vendor'] || ''),
     category: norm(blob['product type'] || ''),
     pattern: norm(blob['pattern'] || ''),
