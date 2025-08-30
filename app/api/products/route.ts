@@ -26,6 +26,8 @@ export async function GET(req: NextRequest) {
         handle: true,
         title: true,
         brand: true,
+        category: true,
+        shortDesc: true,
         price: true,
         imageUrls: true,
       },
@@ -35,6 +37,8 @@ export async function GET(req: NextRequest) {
       handle: p.handle,
       title: p.title,
       brand: p.brand,
+      category: p.category,
+      shortDesc: p.shortDesc,
       price: p.price,
       firstImage: (p.imageUrls || '').split('|').filter(Boolean)[0] || null,
     }))

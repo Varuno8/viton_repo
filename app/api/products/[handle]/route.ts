@@ -14,6 +14,9 @@ export async function GET(
         handle: true,
         title: true,
         brand: true,
+        category: true,
+        pattern: true,
+        color: true,
         shortDesc: true,
         description: true,
         price: true,
@@ -21,6 +24,8 @@ export async function GET(
         priceMax: true,
         productUrl: true,
         imageUrls: true,
+        tags: true,
+        skus: true,
       },
     })
 
@@ -29,11 +34,16 @@ export async function GET(
     }
 
     const images = (product.imageUrls || '').split('|').filter(Boolean)
+    const tags = (product.tags || '').split(',').map(s => s.trim()).filter(Boolean)
+    const skus = (product.skus || '').split('|').filter(Boolean)
 
     const result = {
       handle: product.handle,
       title: product.title,
       brand: product.brand,
+      category: product.category,
+      pattern: product.pattern,
+      color: product.color,
       shortDesc: product.shortDesc,
       description: product.description,
       price: product.price,
@@ -41,6 +51,8 @@ export async function GET(
       priceMax: product.priceMax,
       productUrl: product.productUrl,
       images,
+      tags,
+      skus,
     }
 
     return NextResponse.json(result, {
