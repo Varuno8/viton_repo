@@ -4,7 +4,6 @@ import { motion } from 'framer-motion'
 
 interface ProductCardProps {
   product: {
-    id: string
     handle: string
     title: string
     brand: string | null

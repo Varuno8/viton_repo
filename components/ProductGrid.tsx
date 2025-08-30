@@ -3,10 +3,11 @@ import { useEffect, useState } from 'react'
 import { ProductCard } from './ProductCard'
 
 interface Product {
-  id: string
   handle: string
   title: string
+  shortDesc: string | null
   brand: string | null
+  category: string | null
   price: number | null
   firstImage: string | null
 }
@@ -49,7 +50,7 @@ export function ProductGrid({ initialProducts }: Props) {
             ? Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="h-64 rounded-2xl bg-white/5 animate-pulse" />
               ))
-            : products.map(p => <ProductCard key={p.id} product={p} />)}
+            : products.map(p => <ProductCard key={p.handle} product={p} />)}
         </div>
       </div>
     </div>
