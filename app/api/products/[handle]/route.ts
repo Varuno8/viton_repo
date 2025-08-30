@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { splitPipe, splitComma } from '@/lib/helpers';
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(
   req: NextRequest,
@@ -8,26 +9,60 @@ export async function GET(
 ) {
   try {
     const product = await prisma.product.findUnique({
-      where: { handle: params.handle }
-    });
-    
+      where: { handle: params.handle },
+      select: {
+        handle: true,
+        title: true,
+        brand: true,
+        category: true,
+        pattern: true,
+        color: true,
+        shortDesc: true,
+        description: true,
+        price: true,
+        priceMin: true,
+        priceMax: true,
+        productUrl: true,
+        imageUrls: true,
+        tags: true,
+        skus: true,
+      },
+    })
+
     if (!product) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
-    
-    const productWithArrays = {
-      ...product,
-      imageUrls: splitPipe(product.imageUrls),
-      tags: splitComma(product.tags),
-      skus: splitPipe(product.skus),
-    };
-    
-    return NextResponse.json(productWithArrays);
+
+    const images = (product.imageUrls || '').split('|').filter(Boolean)
+    const tags = (product.tags || '').split(',').map(s => s.trim()).filter(Boolean)
+    const skus = (product.skus || '').split('|').filter(Boolean)
+
+    const result = {
+      handle: product.handle,
+      title: product.title,
+      brand: product.brand,
+      category: product.category,
+      pattern: product.pattern,
+      color: product.color,
+      shortDesc: product.shortDesc,
+      description: product.description,
+      price: product.price,
+      priceMin: product.priceMin,
+      priceMax: product.priceMax,
+      productUrl: product.productUrl,
+      images,
+      tags,
+      skus,
+    }
+
+    return NextResponse.json(result, {
+      headers: { 'Cache-Control': 'no-store' },
+    })
   } catch (error) {
-    console.error('Product API error:', error);
+    console.error('Product API error:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch product' }, 
+      { error: 'Failed to fetch product' },
       { status: 500 }
-    );
+    )
   }
 }

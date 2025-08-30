@@ -1,41 +1,33 @@
-import { prisma } from './prisma'
-import { parseProductCsv, toDirectDriveUrl } from './csv'
+import { prisma } from './prisma';
+import { isHMHeaders, parseHMRow, toProductDraft } from './csv';
+import { parse } from 'csv-parse/sync';
 
-export async function ingestCsvContent(csv: string) {
-  const products = parseProductCsv(csv)
-  for (const p of products) {
-    await prisma.product.upsert({
-      where: { handle: p.handle },
-      update: {
-        title: p.title,
-        description: p.description,
-        brand: p.brand,
-        category: p.category,
-        price: p.price,
-        imageUrls: p.imageUrls,
-        colors: p.colors,
-        sizes: p.sizes,
-      },
-      create: {
-        handle: p.handle,
-        title: p.title,
-        description: p.description,
-        brand: p.brand,
-        category: p.category,
-        price: p.price,
-        imageUrls: p.imageUrls,
-        colors: p.colors,
-        sizes: p.sizes,
-      },
-    })
-  }
-  return prisma.product.count()
+export async function ingestCsvContent(csv: string, replace = true) {
+  const rows: any[] = parse(csv, { columns: true, skip_empty_lines: true, bom: true });
+  if (!rows.length) return 0;
+  const hm = isHMHeaders(Object.keys(rows[0]));
+
+  await prisma.$transaction(async tx => {
+    if (replace) {
+      await tx.product.deleteMany();
+    }
+    for (let i = 0; i < rows.length; i++) {
+      const draft = hm ? parseHMRow(rows[i]) : toProductDraft(rows[i], i);
+      if (!draft) continue;
+      await tx.product.upsert({
+        where: { handle: draft.handle },
+        update: { ...draft, updatedAt: new Date() },
+        create: { ...draft },
+      });
+    }
+  });
+
+  return rows.length;
 }
 
-export async function ingestCsvFromUrl(url: string) {
-  const direct = toDirectDriveUrl(url)
-  if (!direct) throw new Error('Invalid url')
-  const res = await fetch(direct)
-  const csv = await res.text()
-  return ingestCsvContent(csv)
+export async function ingestCsvFromUrl(url: string, replace = true) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch CSV from URL');
+  const csv = await res.text();
+  return ingestCsvContent(csv, replace);
 }

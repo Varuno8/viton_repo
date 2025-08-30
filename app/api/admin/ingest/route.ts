@@ -1,88 +1,52 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { parseProductCsv, toDirectDriveUrl } from '@/lib/csv';
+import { isHMHeaders, parseHMRow, toProductDraft } from '@/lib/csv';
+import { parse } from 'csv-parse/sync';
 
-export async function POST(req: NextRequest) {
-  try {
-    const contentType = req.headers.get('content-type');
-    let csvContent: string;
-    
-    if (contentType?.includes('multipart/form-data')) {
-      const formData = await req.formData();
-      const file = formData.get('file') as File;
-      
-      if (!file) {
-        return NextResponse.json({ error: 'No file provided' }, { status: 400 });
-      }
-      
-      csvContent = await file.text();
-    } else {
-      const body = await req.json();
-      const { url } = body;
-      
-      if (!url) {
-        return NextResponse.json({ error: 'No URL provided' }, { status: 400 });
-      }
-      
-      const directUrl = toDirectDriveUrl(url);
-      const response = await fetch(directUrl);
-      
-      if (!response.ok) {
-        return NextResponse.json({ error: 'Failed to fetch CSV from URL' }, { status: 400 });
-      }
-      
-      csvContent = await response.text();
-    }
-    
-    const products = parseProductCsv(csvContent);
-    let ingestedCount = 0;
-    
-    for (const productData of products) {
-      await prisma.product.upsert({
-        where: { handle: productData.handle },
-        update: {
-          title: productData.title,
-          shortDesc: productData.shortDesc,
-          description: productData.description,
-          brand: productData.brand,
-          category: productData.category,
-          pattern: productData.pattern,
-          color: productData.color,
-          tags: productData.tags,
-          skus: productData.skus,
-          price: productData.price,
-          priceMin: productData.priceMin,
-          priceMax: productData.priceMax,
-          imageUrls: productData.imageUrls,
-          productUrl: productData.productUrl,
-        },
-        create: {
-          handle: productData.handle,
-          title: productData.title,
-          shortDesc: productData.shortDesc,
-          description: productData.description,
-          brand: productData.brand,
-          category: productData.category,
-          pattern: productData.pattern,
-          color: productData.color,
-          tags: productData.tags,
-          skus: productData.skus,
-          price: productData.price,
-          priceMin: productData.priceMin,
-          priceMax: productData.priceMax,
-          imageUrls: productData.imageUrls,
-          productUrl: productData.productUrl,
-        },
-      });
-      ingestedCount++;
-    }
-    
-    return NextResponse.json({ ingestedCount });
-  } catch (error) {
-    console.error('Ingest error:', error);
-    return NextResponse.json(
-      { error: 'Failed to ingest CSV' }, 
-      { status: 500 }
-    );
+export const dynamic = 'force-dynamic';
+
+export async function POST(req: Request) {
+  const form = await req.formData();
+  const replaceAll = form.get('replace') !== null || form.get('replaceAll') === 'true';
+  const file = form.get('file') as File | null;
+  const url = (form.get('url') as string | null) ?? null;
+
+  let csvBuffer: Buffer;
+  if (file && file.size > 0) {
+    csvBuffer = Buffer.from(await file.arrayBuffer());
+  } else if (url) {
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) return NextResponse.json({ error: 'Failed to fetch CSV' }, { status: 400 });
+    csvBuffer = Buffer.from(await r.arrayBuffer());
+  } else {
+    return NextResponse.json({ error: 'Provide file or url' }, { status: 400 });
   }
+
+  const rows: any[] = parse(csvBuffer, { columns: true, skip_empty_lines: true, bom: true });
+  if (!rows.length) return NextResponse.json({ ingestedCount: 0 }, { headers: { 'Cache-Control': 'no-store' } });
+
+  const headers = Object.keys(rows[0]);
+  const hm = isHMHeaders(headers);
+
+  if (replaceAll) {
+    await prisma.product.deleteMany({});
+  }
+
+  let count = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const draft = hm ? parseHMRow(row) : toProductDraft(row, i);
+    if (!draft) continue;
+    await prisma.product.upsert({
+      where: { handle: draft.handle },
+      update: { ...draft, updatedAt: new Date() },
+      create: { ...draft },
+    });
+    count++;
+  }
+
+  return NextResponse.json(
+    { ingestedCount: count },
+    { headers: { 'Cache-Control': 'no-store' } }
+  );
 }

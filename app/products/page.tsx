@@ -1,11 +1,10 @@
 import { ProductGrid } from '@/components/ProductGrid'
 
-export default function ProductsPage() {
-  return (
-    <div>
-      <h1 className="text-xl mb-4">Products</h1>
-      {/* @ts-expect-error Async Server Component */}
-      <ProductGrid />
-    </div>
-  )
+export const revalidate = 0
+
+export default async function ProductsPage() {
+  const base = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const res = await fetch(`${base}/api/products`, { cache: 'no-store' })
+  const products = await res.json()
+  return <ProductGrid initialProducts={Array.isArray(products) ? products : []} />
 }
