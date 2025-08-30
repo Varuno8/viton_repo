@@ -20,6 +20,8 @@ export default async function ProductPage({ params }: Props) {
         <div className="space-y-4 md:sticky top-8 self-start">
           <p className="text-sm text-zinc-400">{product.brand}</p>
           <h1 className="text-3xl font-semibold">{product.title}</h1>
+          {product.shortDesc && <p className="text-zinc-300">{product.shortDesc}</p>}
+          {product.description && <p className="text-zinc-300 whitespace-pre-line">{product.description}</p>}
           {product.price && <p className="text-xl font-medium">${product.price}</p>}
           {product.productUrl && (
             <Link href={product.productUrl} target="_blank" className="text-cyan-400 hover:underline">

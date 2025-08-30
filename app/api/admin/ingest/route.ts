@@ -1,43 +1,52 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { ingestCsvContent, ingestCsvFromUrl } from '@/lib/admin';
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { isHMHeaders, parseHMRow, toProductDraft } from '@/lib/csv';
+import { parse } from 'csv-parse/sync';
 
-export async function POST(req: NextRequest) {
-  try {
-    const contentType = req.headers.get('content-type') || '';
-    let count: number;
-    let replace = true;
+export const dynamic = 'force-dynamic';
 
-    if (contentType.includes('multipart/form-data')) {
-      const form = await req.formData();
-      replace = form.get('replace') !== null;
-      const file = form.get('file') as File | null;
-      const url = (form.get('url') as string | null)?.trim();
-      if (file && file.size > 0) {
-        const text = await file.text();
-        count = await ingestCsvContent(text, replace);
-      } else if (url) {
-        count = await ingestCsvFromUrl(url, replace);
-      } else {
-        return NextResponse.json({ error: 'No file or URL provided' }, { status: 400 });
-      }
-    } else {
-      const body = await req.json().catch(() => null);
-      if (!body) {
-        return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-      }
-      replace = body.replace !== false;
-      if (body.csv) {
-        count = await ingestCsvContent(body.csv, replace);
-      } else if (body.url) {
-        count = await ingestCsvFromUrl(body.url, replace);
-      } else {
-        return NextResponse.json({ error: 'No CSV or URL provided' }, { status: 400 });
-      }
-    }
+export async function POST(req: Request) {
+  const form = await req.formData();
+  const replaceAll = form.get('replace') !== null || form.get('replaceAll') === 'true';
+  const file = form.get('file') as File | null;
+  const url = (form.get('url') as string | null) ?? null;
 
-    return NextResponse.json({ ingestedCount: count });
-  } catch (err) {
-    console.error('Ingest error', err);
-    return NextResponse.json({ error: 'Failed to ingest CSV' }, { status: 500 });
+  let csvBuffer: Buffer;
+  if (file && file.size > 0) {
+    csvBuffer = Buffer.from(await file.arrayBuffer());
+  } else if (url) {
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) return NextResponse.json({ error: 'Failed to fetch CSV' }, { status: 400 });
+    csvBuffer = Buffer.from(await r.arrayBuffer());
+  } else {
+    return NextResponse.json({ error: 'Provide file or url' }, { status: 400 });
   }
+
+  const rows: any[] = parse(csvBuffer, { columns: true, skip_empty_lines: true, bom: true });
+  if (!rows.length) return NextResponse.json({ ingestedCount: 0 }, { headers: { 'Cache-Control': 'no-store' } });
+
+  const headers = Object.keys(rows[0]);
+  const hm = isHMHeaders(headers);
+
+  if (replaceAll) {
+    await prisma.product.deleteMany({});
+  }
+
+  let count = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const draft = hm ? parseHMRow(row) : toProductDraft(row, i);
+    if (!draft) continue;
+    await prisma.product.upsert({
+      where: { handle: draft.handle },
+      update: { ...draft, updatedAt: new Date() },
+      create: { ...draft },
+    });
+    count++;
+  }
+
+  return NextResponse.json(
+    { ingestedCount: count },
+    { headers: { 'Cache-Control': 'no-store' } }
+  );
 }
