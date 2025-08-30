@@ -5,9 +5,7 @@ import { ProductCard } from './ProductCard'
 interface Product {
   handle: string
   title: string
-  shortDesc: string | null
   brand: string | null
-  category: string | null
   price: number | null
   firstImage: string | null
 }

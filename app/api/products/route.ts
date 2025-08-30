@@ -25,9 +25,7 @@ export async function GET(req: NextRequest) {
       select: {
         handle: true,
         title: true,
-        shortDesc: true,
         brand: true,
-        category: true,
         price: true,
         imageUrls: true,
       },
@@ -36,9 +34,7 @@ export async function GET(req: NextRequest) {
     const result = products.map(p => ({
       handle: p.handle,
       title: p.title,
-      shortDesc: p.shortDesc,
       brand: p.brand,
-      category: p.category,
       price: p.price,
       firstImage: p.imageUrls?.split('|')[0] || null,
     }))

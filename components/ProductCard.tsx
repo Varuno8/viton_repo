@@ -32,12 +32,12 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
           {product.price !== null && (
             <span className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full">
-              ${product.price}
+              ₹{product.price}
             </span>
           )}
         </div>
         <div className="p-4 space-y-1">
-          <p className="text-sm text-zinc-400">{product.brand}</p>
+          {product.brand && <p className="text-sm text-zinc-400">{product.brand}</p>}
           <h3 className="font-medium line-clamp-2">{product.title}</h3>
         </div>
       </Link>

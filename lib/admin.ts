@@ -1,8 +1,12 @@
 import { prisma } from './prisma'
 import { parseProductCsv, toDirectDriveUrl } from './csv'
 
-export async function ingestCsvContent(csv: string, replace = true) {
-  const products = parseProductCsv(csv)
+export async function ingestCsvContent(
+  csv: string,
+  replace = true,
+  parser?: 'default' | 'hm'
+) {
+  const products = parseProductCsv(csv, parser)
 
   products.slice(0, 5).forEach(p => {
     const imageCount = (p.imageUrls || '').split('|').filter(Boolean).length
@@ -25,10 +29,14 @@ export async function ingestCsvContent(csv: string, replace = true) {
   return products.length
 }
 
-export async function ingestCsvFromUrl(url: string, replace = true) {
+export async function ingestCsvFromUrl(
+  url: string,
+  replace = true,
+  parser?: 'default' | 'hm'
+) {
   const direct = toDirectDriveUrl(url)
   const res = await fetch(direct)
   if (!res.ok) throw new Error('Failed to fetch CSV from URL')
   const csv = await res.text()
-  return ingestCsvContent(csv, replace)
+  return ingestCsvContent(csv, replace, parser)
 }

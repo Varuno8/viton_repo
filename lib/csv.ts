@@ -72,6 +72,52 @@ export function toDirectDriveUrl(url: string) {
   return match ? `https://drive.google.com/uc?export=download&id=${match[1]}` : url
 }
 
+export function parseRs(s?: string) {
+  if (!s) return null
+  const num = s.replace(/[^\d.]/g, '')
+  const val = parseFloat(num)
+  return Number.isNaN(val) ? null : val
+}
+
+export function parseHMRow(row: Record<string, any>, index: number) {
+  const productUrl = norm(row['bae9f4 href'])
+  const image = norm(row['ecac7b src'])
+  let title = norm(row['b8e2ea'])
+  if (!title && productUrl) {
+    try {
+      title = decodeURIComponent(
+        new URL(productUrl).pathname.split('/').filter(Boolean).pop() || ''
+      ).replace(/[-_]/g, ' ')
+    } catch {
+      /* ignore */
+    }
+  }
+  if (!title) title = `Untitled ${index + 1}`
+  const handle = slugifyTitle(title)
+  return {
+    handle,
+    title,
+    shortDesc: '',
+    description: '',
+    brand: 'H&M',
+    category: '',
+    pattern: '',
+    color: '',
+    tags: '',
+    skus: '',
+    price: parseRs(row['c166ec']),
+    priceMin: parseRs(row['c166ec 2']),
+    priceMax: null,
+    imageUrls: image || '',
+    productUrl: productUrl || null,
+  }
+}
+
+export function detectCsvParser(csv: string): 'default' | 'hm' {
+  const firstLine = csv.split(/\r?\n/)[0].toLowerCase()
+  return firstLine.includes('bae9f4 href') ? 'hm' : 'default'
+}
+
 export function toProductDraft(row: Record<string, any>, index: number) {
   const blob = parseKeyValueBlob(
     getAny(row, 'description', 'Description', 'desc', 'details', 'long_description')
@@ -193,7 +239,7 @@ export function toProductDraft(row: Record<string, any>, index: number) {
   return draft
 }
 
-export function parseProductCsv(csv: string) {
+export function parseProductCsv(csv: string, parser?: 'default' | 'hm') {
   const records = parse(csv, {
     columns: true,
     relax_column_count: true,
@@ -201,13 +247,15 @@ export function parseProductCsv(csv: string) {
     trim: true,
   })
 
+  const mode = parser ?? detectCsvParser(csv)
+
   const products: NonNullable<ReturnType<typeof toProductDraft>>[] = []
   records.forEach((raw, i) => {
-    const draft = toProductDraft(raw, i)
+    const draft = mode === 'hm' ? parseHMRow(raw, i) : toProductDraft(raw, i)
     if (draft) products.push(draft)
   })
   return products
 }
 
-export { norm, lc, getAny }
+export { norm, lc, getAny, detectCsvParser }
 
