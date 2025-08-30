@@ -3,9 +3,10 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     remotePatterns: [
-      { protocol: "https", hostname: "cdn.shopify.com" },
-      { protocol: "https", hostname: "**" }
-    ]
-  }
+      { protocol: 'https', hostname: 'image.hm.com' },
+      { protocol: 'https', hostname: 'cdn.shopify.com' },
+      { protocol: 'https', hostname: '**' },
+    ],
+  },
 };
 export default nextConfig;

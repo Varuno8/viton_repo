@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
       title: p.title,
       brand: p.brand,
       price: p.price,
-      firstImage: p.imageUrls?.split('|')[0] || null,
+      firstImage: (p.imageUrls || '').split('|').filter(Boolean)[0] || null,
     }))
 
     return NextResponse.json(result, {

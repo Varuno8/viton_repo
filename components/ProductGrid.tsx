@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { ProductCard } from './ProductCard'
+import ProductCard from './ProductCard'
 
 interface Product {
   handle: string
@@ -48,7 +48,7 @@ export function ProductGrid({ initialProducts }: Props) {
             ? Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="h-64 rounded-2xl bg-white/5 animate-pulse" />
               ))
-            : products.map(p => <ProductCard key={p.handle} product={p} />)}
+            : products.map(p => <ProductCard key={p.handle} {...p} />)}
         </div>
       </div>
     </div>

@@ -1,46 +1,41 @@
-import Image from 'next/image'
-import Link from 'next/link'
-import { motion } from 'framer-motion'
+'use client';
+import Image from 'next/image';
+import Link from 'next/link';
 
-interface ProductCardProps {
-  product: {
-    handle: string
-    title: string
-    brand: string | null
-    price: number | null
-    firstImage: string | null
-  }
-}
+type Props = {
+  handle: string;
+  title: string;
+  price?: number | null;
+  firstImage?: string | null;
+};
 
-export function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ handle, title, price, firstImage }: Props) {
   return (
-    <motion.div whileHover={{ y: -4 }} className="group relative rounded-2xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-sm shadow-lg">
-      <Link href={`/products/${product.handle}`}>
-        <div className="relative aspect-[3/4] overflow-hidden">
-          {product.firstImage ? (
-            <Image
-              src={product.firstImage}
-              alt={product.title}
-              fill
-              sizes="(max-width:768px) 100vw, 33vw"
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full w-full bg-zinc-800 text-zinc-400">
-              No image
-            </div>
-          )}
-          {product.price !== null && (
-            <span className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full">
-              ₹{product.price}
-            </span>
-          )}
-        </div>
-        <div className="p-4 space-y-1">
-          {product.brand && <p className="text-sm text-zinc-400">{product.brand}</p>}
-          <h3 className="font-medium line-clamp-2">{product.title}</h3>
-        </div>
-      </Link>
-    </motion.div>
-  )
+    <Link
+      href={`/products/${handle}`}
+      className="group rounded-2xl overflow-hidden bg-zinc-900/40 ring-1 ring-white/10 hover:ring-cyan-400/40 transition"
+    >
+      <div className="relative aspect-[3/4] bg-zinc-800/40 flex items-center justify-center text-zinc-400">
+        {firstImage ? (
+          <Image
+            src={firstImage}
+            alt={title}
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            sizes="(min-width:1024px) 25vw, 50vw"
+            priority={false}
+            unoptimized
+          />
+        ) : (
+          <span>No image</span>
+        )}
+      </div>
+      <div className="p-3 space-y-1">
+        <div className="text-sm text-zinc-300 line-clamp-1">{title || 'Untitled'}</div>
+        {typeof price === 'number' && (
+          <div className="text-xs text-zinc-400">₹{price.toFixed(2)}</div>
+        )}
+      </div>
+    </Link>
+  );
 }
